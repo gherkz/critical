@@ -10,6 +10,7 @@ const fs = require('fs');
 const finalhandler = require('finalhandler');
 const serveStatic = require('serve-static');
 const nn = require('normalize-newline');
+const safe = require('postcss-safe-parser');
 const {read, readAndRemove} = require('./helper');
 const {generate} = require('..');
 
@@ -1395,5 +1396,24 @@ describe('generate (remote)', () => {
     });
 
     expect(mockHead).toHaveBeenCalled();
+  });
+
+  test('should use the provided custom postcss parser', async (done) => {
+    const expected = read('expected/generate-syntax-errors.css');
+    const target = path.resolve('.critical.css');
+
+    generate(
+      {
+        base: FIXTURES_DIR,
+        src: 'generate-syntax-errors.html',
+        target,
+        width: 1300,
+        height: 900,
+        postcssOpts: {
+          parser: safe
+        }
+      },
+      assertCritical(target, expected, done)
+    );
   });
 });

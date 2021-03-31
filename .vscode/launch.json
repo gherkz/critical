@@ -1,0 +1,42 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "pwa-node",
+            "request": "launch",
+            "name": "Launch Program",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/cli.js",
+            "args": [
+                "https://www.koaspeer.com/",
+                "--penthouse-timeout", "60000",
+                "--userAgent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36",
+                "--dimensions", "1000x800",
+                "--dimensions", "2000x1600",
+            ],
+            "console": "internalConsole",
+            "outputCapture": "std",
+        },
+        {
+            "type": "pwa-node",
+            "request": "launch",
+            "name": "Test",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/node_modules/.bin/jest",
+            "args": [
+                "-t",
+                "should use the provided custom postcss parser"
+            ],
+            "console": "internalConsole",
+            "outputCapture": "std",
+        },
+        
+    ]
+}

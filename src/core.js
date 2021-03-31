@@ -107,6 +107,7 @@ async function create(options = {}) {
     inlineImages,
     maxImageFileSize,
     postcss: postProcess = [],
+    postcssOpts,
     strict,
     concurrency = Number.POSITIVE_INFINITY,
     assetPaths = [],
@@ -173,7 +174,7 @@ async function create(options = {}) {
   // Post-process critical css
   if (postProcess.length > 0) {
     criticalCSS = await postcss(postProcess)
-      .process(criticalCSS, {from: undefined})
+      .process(criticalCSS, {from: undefined, ...postcssOpts})
       .then((contents) => contents.css);
   }
 
