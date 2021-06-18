@@ -255,7 +255,7 @@ function glob(pattern, {base} = {}) {
  * @param {string|function} method Rebase method. See https://github.com/postcss/postcss-url#options-combinations
  * @returns {Buffer} Rebased css
  */
-async function rebaseAssets(css, from, to, method = 'rebase') {
+async function rebaseAssets(css, from, to, method = 'rebase', postcssOpts = {}) {
   let rebased = css.toString();
 
   debug('Rebase assets', {from, to});
@@ -283,15 +283,14 @@ async function rebaseAssets(css, from, to, method = 'rebase') {
 
       return method(assetNormalized, ...rest);
     };
-
     const result = await postcss()
       .use(postcssUrl({url: transform}))
-      .process(css, {from, to});
+      .process(css, {from, to, ...postcssOpts});
     rebased = result.css;
   } else if (from && to) {
     const result = await postcss()
       .use(postcssUrl({url: method}))
-      .process(css, {from, to});
+      .process(css, {from, to, ...postcssOpts});
     rebased = result.css;
   }
 
@@ -719,7 +718,7 @@ async function vinylize(src, options = {}) {
  * @param {object} options Critical options
  * @returns {Promise<Vinyl>} Vinyl representation fo the stylesheet
  */
-async function getStylesheet(document, filepath, options = {}) {
+async function getStylesheet(document, filepath, options = {}, postcssOpts = {}) {
   const {rebase = {}, css, strict} = options;
   const originalPath = filepath;
 
@@ -771,9 +770,9 @@ async function getStylesheet(document, filepath, options = {}) {
   }
 
   if (rebase.from && rebase.to) {
-    file.contents = await rebaseAssets(file.contents, rebase.from, rebase.to);
+    file.contents = await rebaseAssets(file.contents, rebase.from, rebase.to, undefined, postcssOpts);
   } else if (typeof rebase === 'function') {
-    file.contents = await rebaseAssets(file.contents, stylepath, document.virtualPath, rebase);
+    file.contents = await rebaseAssets(file.contents, stylepath, document.virtualPath, rebase, postcssOpts);
     // Next rebase to the stylesheet url
   } else if (isRemote(rebase.to || stylepath)) {
     const from = rebase.from || stylepath;
@@ -783,16 +782,16 @@ async function getStylesheet(document, filepath, options = {}) {
 
     // Use relative path to document (local)
   } else if (document.virtualPath) {
-    file.contents = await rebaseAssets(file.contents, rebase.from || stylepath, rebase.to || document.virtualPath);
+    file.contents = await rebaseAssets(file.contents, rebase.from || stylepath, rebase.to || document.virtualPath, undefined, postcssOpts);
   } else if (document.remote) {
     const {pathname} = document.urlObj;
-    file.contents = await rebaseAssets(file.contents, rebase.from || stylepath, rebase.to || pathname);
+    file.contents = await rebaseAssets(file.contents, rebase.from || stylepath, rebase.to || pathname, undefined, postcssOpts);
 
     // Make images absolute if we have an absolute positioned stylesheet
   } else if (path.isAbsolute(stylepath)) {
     file.contents = await rebaseAssets(file.contents, rebase.from || stylepath, rebase.to || '/index.html', (asset) =>
       normalizePath(asset.absolutePath)
-    );
+    , postcssOpts);
   } else {
     warn(`Not rebasing assets for ${originalPath}. Use "rebase" option`);
   }
@@ -808,16 +807,16 @@ async function getStylesheet(document, filepath, options = {}) {
  * @param {object} options Critical options
  * @returns {Promise<string>} Css string unoptimized, Multiple stylesheets are concatenated with EOL
  */
-async function getCss(document, options = {}) {
+async function getCss(document, options = {}, postcssOpts = {}) {
   const {css} = options;
   let stylesheets = [];
 
   if (css) {
     const files = await glob(css, options);
-    stylesheets = await mapAsync(files, (file) => getStylesheet(document, file, options));
+    stylesheets = await mapAsync(files, (file) => getStylesheet(document, file, options, postcssOpts));
     debug('(getCss) css option set', files, stylesheets);
   } else {
-    stylesheets = await mapAsync(document.stylesheets, (file) => getStylesheet(document, file, options));
+    stylesheets = await mapAsync(document.stylesheets, (file) => getStylesheet(document, file, options, postcssOpts));
     debug('(getCss) extract from document', document.stylesheets, stylesheets);
   }
 
@@ -886,7 +885,7 @@ async function preparePenthouseData(document) {
  * @param {object} options Critical options
  * @returns {Promise<Vinyl>} Vinyl representation of HTML document
  */
-async function getDocument(filepath, options = {}) {
+async function getDocument(filepath, options = {}, postcssOpts = {}) {
   const {rebase = {}, base} = options;
 
   if (!isVinyl(filepath) && !isRemote(filepath) && !fs.existsSync(filepath) && base) {
@@ -912,7 +911,7 @@ async function getDocument(filepath, options = {}) {
     cwd: document.cwd,
   });
 
-  document.css = await getCss(document, options);
+  document.css = await getCss(document, options, postcssOpts);
 
   const [url, cleanup] = await preparePenthouseData(document);
   document.url = url;
@@ -927,7 +926,7 @@ async function getDocument(filepath, options = {}) {
  * @param {object} options Critical options
  * @returns {Promise<*>} Vinyl representation of HTML document
  */
-async function getDocumentFromSource(html, options = {}) {
+async function getDocumentFromSource(html, options = {}, postcssOpts = {}) {
   const {rebase = {}, base} = options;
   const document = await vinylize({html}, options);
 
@@ -944,7 +943,7 @@ async function getDocumentFromSource(html, options = {}) {
     cwd: document.cwd,
   });
 
-  document.css = await getCss(document, options);
+  document.css = await getCss(document, options, postcssOpts);
 
   const [url, cleanup] = await preparePenthouseData(document);
   document.url = url;

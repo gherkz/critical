@@ -112,7 +112,7 @@ async function create(options = {}) {
   } = options;
 
   // Create vinyl representation for the document with normalized filepath and normalized styles
-  const document = src ? await getDocument(src, options) : await getDocumentFromSource(html, options);
+  const document = src ? await getDocument(src, options, postcssOpts) : await getDocumentFromSource(html, options, postcssOpts);
 
   if (!document.css || !document.css.toString()) {
     if (strict) {
