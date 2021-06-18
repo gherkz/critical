@@ -233,6 +233,54 @@ describe('generate (local)', () => {
     );
   });
 
+  test('should consider inline styles', (done) => {
+    const expected = read('expected/generate-adaptive.css', 'utf8');
+    const target = path.resolve('.adaptive-inline.css');
+
+    generate(
+      {
+        base: FIXTURES_DIR,
+        src: 'generate-adaptive-inline.html',
+        target,
+        dimensions: [
+          {
+            width: 100,
+            height: 70,
+          },
+          {
+            width: 1000,
+            height: 70,
+          },
+        ],
+      },
+      assertCritical(target, expected, done)
+    );
+  });
+
+  test('should consider data uris in stylesheet hrefs', (done) => {
+    const expected = read('expected/generate-adaptive.css', 'utf8');
+    const target = path.resolve('.adaptive-base64.css');
+
+    generate(
+      {
+        base: FIXTURES_DIR,
+        src: 'generate-adaptive-base64.html',
+        target,
+        dimensions: [
+          {
+            width: 100,
+            height: 70,
+          },
+          {
+            width: 1000,
+            height: 70,
+          },
+        ],
+      },
+      assertCritical(target, expected, done)
+    );
+  });
+
   test('should generate minified critical-path CSS', (done) => {
     const expected = read('expected/generate-default.css', true);
     const target = path.resolve('.critical.min.css');
@@ -241,7 +289,6 @@ describe('generate (local)', () => {
       {
         base: FIXTURES_DIR,
         src: 'generate-default.html',
-        minify: true,
         target,
         width: 1300,
         height: 900,
@@ -259,7 +306,6 @@ describe('generate (local)', () => {
         base: FIXTURES_DIR,
         src: 'generate-default-nostyle.html',
         css: ['fixtures/styles/main.css', 'fixtures/styles/bootstrap.css'],
-        minify: true,
         target,
         width: 1300,
         height: 900,
@@ -520,7 +566,7 @@ describe('generate (local)', () => {
   });
 
   test('should generate and inline minified critical-path CSS', (done) => {
-    const expected = read('expected/generateInline-minified.html');
+    const expected = read('expected/generateInline.html');
     const target = path.join(__dirname, '.generateInline-minified3.html');
 
     generate(
@@ -528,7 +574,6 @@ describe('generate (local)', () => {
         base: FIXTURES_DIR,
         src: 'generateInline.html',
         // destFolder: '.',
-        minify: true,
         target,
         inline: true,
       },
@@ -537,8 +582,8 @@ describe('generate (local)', () => {
   });
 
   test('should handle multiple calls', (done) => {
-    const expected1 = read('expected/generateInline-unminified.html');
-    const expected2 = read('expected/generateInline-minified.html');
+    const expected1 = read('expected/generateInline.html');
+    const expected2 = read('expected/generateInline-svg.html');
 
     async.series(
       {
@@ -546,7 +591,6 @@ describe('generate (local)', () => {
           generate(
             {
               base: FIXTURES_DIR,
-              minify: false,
               src: 'generateInline.html',
               inline: true,
             },
@@ -557,8 +601,7 @@ describe('generate (local)', () => {
           generate(
             {
               base: FIXTURES_DIR,
-              minify: true,
-              src: 'generateInline.html',
+              src: 'generateInline-svg.html',
               inline: true,
             },
             cb
@@ -587,7 +630,6 @@ describe('generate (local)', () => {
         base: FIXTURES_DIR,
         src: 'generateInline-external.html',
         inlineImages: false,
-        minify: true,
         target,
         inline: true,
       },
@@ -604,7 +646,6 @@ describe('generate (local)', () => {
         base: FIXTURES_DIR,
         src: 'generateInline-external.html',
         inlineImages: false,
-        minify: true,
         extract: true,
         target,
         inline: true,
@@ -620,7 +661,6 @@ describe('generate (local)', () => {
     generate(
       {
         base: FIXTURES_DIR,
-        minify: true,
         src: 'generateInline-svg.html',
         target,
         inline: true,
@@ -636,7 +676,6 @@ describe('generate (local)', () => {
     generate(
       {
         base: FIXTURES_DIR,
-        minify: true,
         extract: true,
         src: 'generateInline.html',
         target,
@@ -653,7 +692,6 @@ describe('generate (local)', () => {
     generate(
       {
         base: FIXTURES_DIR,
-        minify: true,
         extract: true,
         html: read('fixtures/generateInline.html'),
         target,
@@ -691,7 +729,6 @@ describe('generate (local)', () => {
         src: 'generate-default.html',
         target,
         ignore: [],
-        minify: true,
         width: 1300,
         height: 900,
       },
@@ -709,7 +746,6 @@ describe('generate (local)', () => {
         src: 'generate-ignorefont.html',
         target,
         ignore: ['@font-face'],
-        minify: true,
         width: 1300,
         height: 900,
       },
@@ -761,7 +797,6 @@ describe('generate (local)', () => {
             height: 1080,
           },
         ],
-        minify: true,
         extract: false,
         ignore: ['@font-face', /url\(/],
         include: [/^\.main-navigation.*$/, /^\.hero-deck.*$/, /^\.deck.*$/, /^\.search-box.*$/],
@@ -854,7 +889,6 @@ describe('generate (local)', () => {
         base: FIXTURES_DIR,
         src: 'issue-395.html',
         target,
-        minify: false,
         inline: false,
         width: 1300,
         height: 900,
@@ -876,7 +910,6 @@ describe('generate (local)', () => {
         base: FIXTURES_DIR,
         src: 'issue-415.html',
         target,
-        minify: false,
         inline: false,
         dimensions,
         concurrency: 10,
@@ -937,7 +970,6 @@ describe('generate (remote)', () => {
       {
         base: FIXTURES_DIR,
         src: `http://localhost:${port}/generate-default.html`,
-        minify: true,
         target,
         width: 1300,
         height: 900,
@@ -955,7 +987,6 @@ describe('generate (remote)', () => {
         base: FIXTURES_DIR,
         src: `http://localhost:${port}/generate-default-nostyle.html`,
         css: ['fixtures/styles/main.css', 'fixtures/styles/bootstrap.css'],
-        minify: true,
         target,
         width: 1300,
         height: 900,
@@ -1160,14 +1191,13 @@ describe('generate (remote)', () => {
   });
 
   test('should generate and inline minified critical-path CSS', (done) => {
-    const expected = read('expected/generateInline-minified.html');
-    const target = path.join(__dirname, '.generateInline-minified.html');
+    const expected = read('expected/generateInline.html');
+    const target = path.join(__dirname, '.generateInline.html');
 
     generate(
       {
         base: FIXTURES_DIR,
         src: `http://localhost:${port}/generateInline.html`,
-        minify: true,
         target,
         inline: true,
       },
@@ -1177,7 +1207,7 @@ describe('generate (remote)', () => {
 
   test('should handle multiple calls', (done) => {
     const expected1 = read('expected/generateInline.html');
-    const expected2 = read('expected/generateInline-minified.html');
+    const expected2 = read('expected/generateInline.html');
     async.series(
       {
         first(cb) {
@@ -1194,7 +1224,6 @@ describe('generate (remote)', () => {
           generate(
             {
               base: FIXTURES_DIR,
-              minify: true,
               src: `http://localhost:${port}/generateInline.html`,
               inline: true,
             },
@@ -1220,7 +1249,6 @@ describe('generate (remote)', () => {
         base: FIXTURES_DIR,
         src: `http://localhost:${port}/generateInline-external2.html`,
         inlineImages: false,
-        minify: true,
         target,
         inline: true,
       },
@@ -1237,7 +1265,6 @@ describe('generate (remote)', () => {
         base: FIXTURES_DIR,
         src: `http://localhost:${port}/generateInline-external2.html`,
         inlineImages: false,
-        minify: true,
         extract: true,
         target,
         inline: true,
@@ -1253,7 +1280,6 @@ describe('generate (remote)', () => {
     generate(
       {
         base: FIXTURES_DIR,
-        minify: true,
         src: `http://localhost:${port}/generateInline-svg.html`,
         target,
         inline: true,
@@ -1269,7 +1295,6 @@ describe('generate (remote)', () => {
     generate(
       {
         base: FIXTURES_DIR,
-        minify: true,
         extract: true,
         src: `http://localhost:${port}/generateInline.html`,
         target,
@@ -1307,7 +1332,6 @@ describe('generate (remote)', () => {
         src: `http://localhost:${port}/generate-default.html`,
         target,
         ignore: [],
-        minify: true,
         width: 1300,
         height: 900,
       },
@@ -1325,7 +1349,6 @@ describe('generate (remote)', () => {
         src: `http://localhost:${port}/generate-ignorefont.html`,
         target,
         ignore: ['@font-face'],
-        minify: true,
         width: 1300,
         height: 900,
       },
