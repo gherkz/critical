@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "chalk": "^4.1.0",
-    "clean-css": "^5.1.2",
+    "clean-css": "git+https://github.com/gherkz/clean-css.git#b42671d4250759604495936a06accdc3476fbaf3",
     "common-tags": "^1.8.0",
     "css-url-parser": "^1.1.3",
     "data-uri-to-buffer": "^3.0.1",
