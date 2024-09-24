@@ -1,21 +1,24 @@
-'use strict';
+import path from 'node:path';
+import {createServer} from 'node:http';
+import {fileURLToPath} from 'node:url';
+import {Buffer} from 'node:buffer';
+import process from 'node:process';
+import fs from 'node:fs';
+import {jest} from '@jest/globals';
+import getPort from 'get-port';
+import Vinyl from 'vinyl';
+import nock from 'nock';
+import async from 'async';
+import finalhandler from 'finalhandler';
+import serveStatic from 'serve-static';
+import nn from 'normalize-newline';
+import safe = 'postcss-safe-parser';
+import {generate} from '../index.js';
+import {read, readAndRemove} from './helper/index.js';
 
-const path = require('path');
-const {createServer} = require('http');
-const getPort = require('get-port');
-const Vinyl = require('vinyl');
-const nock = require('nock');
-const async = require('async');
-const fs = require('fs');
-const finalhandler = require('finalhandler');
-const serveStatic = require('serve-static');
-const nn = require('normalize-newline');
-const safe = require('postcss-safe-parser');
-const {read, readAndRemove} = require('./helper');
-const {generate} = require('..');
+jest.setTimeout(100_000);
 
-jest.setTimeout(100000);
-
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const FIXTURES_DIR = path.join(__dirname, '/fixtures/');
 
 function assertCritical(target, expected, done, skipTarget) {
@@ -156,7 +159,7 @@ describe('generate (local)', () => {
       },
       (err) => {
         expect(err).toBeInstanceOf(Error);
-        fs.unlink(target, () => done());
+        fs.promises.unlink(target).then(() => done());
       }
     );
   });
@@ -306,6 +309,23 @@ describe('generate (local)', () => {
         base: FIXTURES_DIR,
         src: 'generate-default-nostyle.html',
         css: ['fixtures/styles/main.css', 'fixtures/styles/bootstrap.css'],
+        target,
+        width: 1300,
+        height: 900,
+      },
+      assertCritical(target, expected, done)
+    );
+  });
+
+  test('should evaluate css passed as source string', (done) => {
+    const expected = 'html{display:block}';
+    const target = path.resolve('.source-string.css');
+
+    generate(
+      {
+        base: FIXTURES_DIR,
+        src: 'generate-default-nostyle.html',
+        css: ['html{display:block}.someclass{color:red}'],
         target,
         width: 1300,
         height: 900,
@@ -917,6 +937,55 @@ describe('generate (local)', () => {
       assertCritical(target, expected, done)
     );
   });
+
+  test('Ignore inlined stylesheets (disabled)', (done) => {
+    const inlineStyles = '.test-selector{color:#00f}';
+    const target = path.join(__dirname, '.ignore-inlined-styles.css');
+
+    generate(
+      {
+        base: FIXTURES_DIR,
+        src: 'ignoreInlinedStyles.html',
+        target,
+        ignoreInlinedStyles: false,
+        inline: false,
+        concurrency: 1,
+      },
+      assertCritical(target, inlineStyles, done)
+    );
+  });
+
+  test('Ignore inlined stylesheets (enabled)', (done) => {
+    const target = path.join(__dirname, '.ignore-inlined-styles.css');
+    generate(
+      {
+        base: FIXTURES_DIR,
+        src: 'ignoreInlinedStyles.html',
+        target,
+        ignoreInlinedStyles: true,
+        inline: false,
+        concurrency: 1,
+      },
+      assertCritical(target, '', done)
+    );
+  });
+
+  test('issue #566 - consider base tag', (done) => {
+    const expected = read('expected/issue-566.css');
+    const target = path.join(__dirname, '.issue-566.css');
+
+    generate(
+      {
+        base: FIXTURES_DIR,
+        src: 'issue-566.html',
+        target,
+        inline: false,
+        width: 1300,
+        height: 900,
+      },
+      assertCritical(target, expected, done)
+    );
+  });
 });
 
 describe('generate (remote)', () => {
@@ -945,7 +1014,7 @@ describe('generate (remote)', () => {
         src: `http://localhost:${port}/generate-adaptive.html`,
         target,
         penthouse: {
-          timeout: 10000,
+          timeout: 10_000,
         },
         dimensions: [
           {
@@ -1419,6 +1488,23 @@ describe('generate (remote)', () => {
     });
 
     expect(mockHead).toHaveBeenCalled();
+  });
+
+  test('issue #566 - consider base tag', (done) => {
+    const expected = read('expected/issue-566.css');
+    const target = path.join(__dirname, '.issue-566.css');
+
+    generate(
+      {
+        base: FIXTURES_DIR,
+        src: `http://localhost:${port}/issue-566.html`,
+        target,
+        inline: false,
+        width: 1300,
+        height: 900,
+      },
+      assertCritical(target, expected, done)
+    );
   });
 
   test('should use the provided custom postcss parser', async (done) => {

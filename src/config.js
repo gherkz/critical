@@ -1,18 +1,21 @@
-'use strict';
+import process from 'node:process';
+import Joi from 'joi';
+import debugBase from 'debug';
+import {traverse, STOP} from 'async-traverse-tree';
+import {ConfigError} from './errors.js';
 
-const Joi = require('joi');
-const debug = require('debug')('critical:config');
-const {ConfigError} = require('./errors');
+const debug = debugBase('critical:config');
 
-const DEFAULT = {
+export const DEFAULT = {
   width: 1300,
   height: 900,
-  timeout: 30000,
-  maxImageFileSize: 10240,
+  timeout: 30_000,
+  maxImageFileSize: 10_240,
   inline: false,
   strict: false,
   extract: false,
   inlineImages: false,
+  ignoreInlinedStyles: false,
   concurrency: Number.POSITIVE_INFINITY,
   include: [],
 };
@@ -24,6 +27,7 @@ const schema = Joi.object()
     css: [Joi.string(), Joi.array()],
     base: Joi.string(),
     strict: Joi.boolean().default(DEFAULT.strict),
+    ignoreInlinedStyles: Joi.boolean().default(DEFAULT.ignoreInlinedStyles),
     extract: Joi.boolean().default(DEFAULT.extract),
     inlineImages: Joi.boolean().default(DEFAULT.inlineImages),
     postcss: Joi.array(),
@@ -68,12 +72,28 @@ const schema = Joi.object()
     ],
     assetPaths: Joi.array().items(Joi.string()),
     userAgent: Joi.string(),
+    cleanCSS: Joi.object().unknown(true),
   })
   .label('options')
   .xor('html', 'src');
 
-function getOptions(options = {}) {
-  const {error, value} = schema.validate(options);
+export async function getOptions(options = {}) {
+  const parsedOptions = await traverse(options, (key, value) => {
+    if (['css', 'html', 'src'].includes(key)) {
+      return STOP;
+    }
+
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch {}
+    }
+
+    return value;
+  });
+
+  const {error, value} = schema.validate(parsedOptions);
+
   const {inline, dimensions, penthouse = {}, target, ignore} = value || {};
 
   if (error) {
@@ -137,17 +157,11 @@ function getOptions(options = {}) {
   return value;
 }
 
-const validate = (key, val) => {
+export const validate = (key, val) => {
   const {error} = schema.validate({[key]: val, html: '<html/>'});
   if (error) {
     return false;
   }
 
   return true;
-};
-
-module.exports = {
-  DEFAULT,
-  validate,
-  getOptions,
 };
